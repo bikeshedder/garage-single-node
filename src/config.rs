@@ -123,5 +123,5 @@ fn is_valid_bucket_name(name: &str) -> bool {
         Some(first) if first.is_ascii_alphabetic() => (),
         _ => return false,
     }
-    chars.all(|c| c.is_ascii_alphanumeric())
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '-')
 }

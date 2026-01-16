@@ -95,7 +95,7 @@ Notes:
 
 ## Bucket names and policies
 
-Bucket names must start with an ASCII letter and contain only letters and digits.
+Bucket names must start with an ASCII letter and contain only letters, digits, or `-`.
 
 The following two policies are currently supported:
 
