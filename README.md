@@ -7,13 +7,7 @@ imports the access key, and creates/updates buckets with optional public website
 
 ## Usage
 
-Build the image:
-
-```sh
-docker build -t garage-single-node .
-```
-
-Run it (bind a data directory or use named volumes):
+Run the published image (bind a data directory or use named volumes):
 
 ```sh
 docker run --rm \
@@ -22,8 +16,51 @@ docker run --rm \
   -e GARAGE_BUCKETS=media:public,static:public,upload \
   -v garage-meta:/var/lib/garage/meta \
   -v garage-data:/var/lib/garage/data \
-  garage-single-node
+  ghcr.io/bikeshedder/garage-single-node:v2-bs1
 ```
+
+## Release tags and images
+
+Releases publish images to GHCR with tags that combine Garage and garage-bootstrap versions:
+
+```text
+v<garage-version>-bs<garage-bootstrap-version>
+```
+
+Example:
+
+```text
+v2.1.0-bs1.0.0
+```
+
+Image name:
+
+```text
+ghcr.io/bikeshedder/garage-single-node
+```
+
+CI publishes these tags for the same image:
+
+```text
+v2.1.0-bs1.0.0
+v2.1.0-bs1.0
+v2.1.0-bs1
+v2.1.0
+v2.1-bs1.0.0
+v2.1-bs1.0
+v2.1-bs1
+v2.1
+v2-bs1.0.0
+v2-bs1.0
+v2-bs1
+v2
+```
+
+Tag derivation: the workflow publishes every combination of Garage `MAJOR.MINOR.PATCH`, `MAJOR.MINOR`, `MAJOR` with bootstrap `MAJOR.MINOR.PATCH`, `MAJOR.MINOR`, `MAJOR`, plus the Garage-only tags.
+
+Most important tag:
+
+- `v2-bs1` (major Garage + bootstrap major)
 
 Compose example is available in `compose.yml`.
 
@@ -66,6 +103,14 @@ The following two policies are currently supported:
 - `private`
 
 The `public` policy just enables the `webserver` of the bucket with `index.html` as index document while the `private` policy disables it.
+
+## Build from source
+
+Build the image locally:
+
+```sh
+docker build -t garage-single-node .
+```
 
 ## License
 
