@@ -1,2 +1,6 @@
-/target
-/.git
+*
+!/src
+!/build.rs
+!/Cargo.toml
+!/Cargo.lock
+!/garage-admin-v2-openapi-3.0.json

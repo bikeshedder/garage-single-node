@@ -19,6 +19,12 @@ docker run --rm \
   ghcr.io/bikeshedder/garage-single-node:v2-bs1
 ```
 
+Compose example (edit `compose.yml` and/or `example.env` to fit your keys/buckets):
+
+```sh
+docker compose up
+```
+
 ## Release tags and images
 
 Releases publish images to GHCR with tags that combine Garage and garage-bootstrap versions:
@@ -109,7 +115,19 @@ The `public` policy just enables the `webserver` of the bucket with `index.html`
 Build the image locally:
 
 ```sh
-docker build -t garage-single-node .
+set -a
+. ./.env
+set +a
+docker build \
+  --build-arg GARAGE_VERSION="$GARAGE_VERSION" \
+  --build-arg RUST_VERSION="$RUST_VERSION" \
+  -t garage-single-node .
+```
+
+Or using Compose:
+
+```sh
+docker compose build
 ```
 
 ## License

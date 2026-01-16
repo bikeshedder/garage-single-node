@@ -1,4 +1,7 @@
-FROM rust:1.92-alpine AS build
+ARG GARAGE_VERSION
+ARG RUST_VERSION
+
+FROM rust:${RUST_VERSION:?}-alpine AS build
 
 RUN apk add --no-cache \
     build-base \
@@ -9,12 +12,11 @@ RUN apk add --no-cache \
 
 WORKDIR /code
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs && cargo build --release && rm -r src
 COPY . .
 RUN cargo build --release
 
-FROM dxflrs/garage:v2.1.0 AS garage
+FROM dxflrs/garage:v${GARAGE_VERSION:?} AS garage
 
 FROM scratch
 COPY --from=build /code/target/release/garage-bootstrap /garage-bootstrap
