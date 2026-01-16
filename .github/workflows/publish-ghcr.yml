@@ -1,0 +1,124 @@
+name: publish-ghcr
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract versions
+        id: versions
+        run: |
+          set -euo pipefail
+          set -a
+          . ./.env
+          set +a
+          garage_version="${GARAGE_VERSION}"
+          bootstrap_version="$(rg -n '^version = "' Cargo.toml | head -n1 | sed -E 's/^version = "([^"]+)".*/\1/')"
+          tag_ref="${GITHUB_REF_NAME}"
+          expected_tag="v${garage_version}-bs${bootstrap_version}"
+          if [ "$tag_ref" != "$expected_tag" ]; then
+            echo "Tag '$tag_ref' does not match expected '$expected_tag' based on Dockerfile/Cargo.toml." >&2
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+          garage_major="$(printf '%s' "$garage_version" | cut -d. -f1)"
+          garage_minor="$(printf '%s' "$garage_version" | cut -d. -f2)"
+          garage_versions=(
+            "v${garage_version}"
+            "v${garage_major}.${garage_minor}"
+            "v${garage_major}"
+          )
+
+          bootstrap_major="$(printf '%s' "$bootstrap_version" | cut -d. -f1)"
+          bootstrap_minor="$(printf '%s' "$bootstrap_version" | cut -d. -f2)"
+          bootstrap_versions=(
+            "${bootstrap_version}"
+            "${bootstrap_major}.${bootstrap_minor}"
+            "${bootstrap_major}"
+          )
+
+          tags=()
+          for gv in "${garage_versions[@]}"; do
+            for bv in "${bootstrap_versions[@]}"; do
+              tags+=("${image}:${gv}-bs${bv}")
+            done
+            tags+=("${image}:${gv}")
+          done
+
+          {
+            echo "garage_version_raw=${garage_version}"
+            echo "rust_version_raw=${RUST_VERSION}"
+            echo "garage_version=v${garage_version}"
+            echo "bootstrap_version=${bootstrap_version}"
+            echo "tags<<EOF"
+            printf '%s\n' "${tags[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            GARAGE_VERSION=${{ steps.versions.outputs.garage_version_raw }}
+            RUST_VERSION=${{ steps.versions.outputs.rust_version_raw }}
+          tags: |
+            ${{ steps.versions.outputs.tags }}
+
+  build-and-push-dev:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: dev
+        run: |
+          set -euo pipefail
+          set -a
+          . ./.env
+          set +a
+          echo "garage_version_raw=${GARAGE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "rust_version_raw=${RUST_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tags=ghcr.io/${GITHUB_REPOSITORY,,}:v${GARAGE_VERSION}-bs-dev" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            GARAGE_VERSION=${{ steps.dev.outputs.garage_version_raw }}
+            RUST_VERSION=${{ steps.dev.outputs.rust_version_raw }}
+          tags: |
+            ${{ steps.dev.outputs.tags }}
