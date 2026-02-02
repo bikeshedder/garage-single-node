@@ -26,7 +26,19 @@ jobs:
           . ./.env
           set +a
           garage_version="${GARAGE_VERSION}"
-          bootstrap_version="$(rg -n '^version = "' Cargo.toml | head -n1 | sed -E 's/^version = "([^"]+)".*/\1/')"
+          bootstrap_version="$(awk '
+            /^\[package\]$/ {in_pkg=1; next}
+            /^\[/ {in_pkg=0}
+            in_pkg && $0 ~ /^version = "/ {
+              match($0, /"[^"]+"/)
+              print substr($0, RSTART+1, RLENGTH-2)
+              exit
+            }
+          ' Cargo.toml)"
+          if [ -z "$bootstrap_version" ]; then
+            echo "Could not determine bootstrap version from [package] version in Cargo.toml." >&2
+            exit 1
+          fi
           tag_ref="${GITHUB_REF_NAME}"
           expected_tag="v${garage_version}-bs${bootstrap_version}"
           if [ "$tag_ref" != "$expected_tag" ]; then
